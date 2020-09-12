@@ -331,7 +331,7 @@ func initialize(c echo.Context) error {
 		})
 	}
 	tx, err := db.Begin()
-	_, err = tx.Exec("delete chair where stock = 0")
+	_, err = tx.Exec("delete from chair where stock = 0")
 
 	for _, ch := range outofstockChair {
 		c.Logger().Debugf("%v\n", ch)
@@ -598,7 +598,7 @@ func buyChair(c echo.Context) error {
 	}
 
 	if chair.Stock == 1 {
-		_, err = tx.Exec("DELETE chair WHERE id = ?", id)
+		_, err = tx.Exec("DELETE from chair WHERE id = ?", id)
 		if err != nil {
 			c.Echo().Logger.Errorf("stock == 1 but cannot delete, %v", chair)
 		}
