@@ -18,9 +18,9 @@ sudo systemctl start isuumo.go.service
 sudo systemctl start nginx
 
 # slow query log の設定
-sudo mysql << EOF
-set global slow_query_log_file = '/var/log/mysql/slow.log';
-set global long_query_time = 0.1;
-set global slow_query_log = ON;
-set global log_queries_not_using_indexes = ON;
-EOF
+#sudo mysql << EOF
+#set global slow_query_log_file = '/var/log/mysql/slow.log';
+#set global long_query_time = 0.1;
+#set global slow_query_log = ON;
+#set global log_queries_not_using_indexes = ON;
+#EOF
