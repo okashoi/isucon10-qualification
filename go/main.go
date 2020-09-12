@@ -1019,5 +1019,5 @@ func (cs Coordinates) coordinatesToText() string {
 	for _, c := range cs.Coordinates {
 		points = append(points, fmt.Sprintf("%f %f", c.Latitude, c.Longitude))
 	}
-	return fmt.Sprintf("'POLYGON((%s))'", strings.Join(points, ","))
+	return fmt.Sprintf("POLYGON((%s))", strings.Join(points, ","))
 }
