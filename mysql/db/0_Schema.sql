@@ -1,7 +1,6 @@
 DROP DATABASE IF EXISTS isuumo;
 CREATE DATABASE isuumo COLLATE utf8mb4_general_ci;
 
-
 DROP TABLE IF EXISTS isuumo.estate;
 DROP TABLE IF EXISTS isuumo.chair;
 
@@ -19,7 +18,8 @@ CREATE TABLE isuumo.estate
 	    door_width  INTEGER             NOT NULL,
 	    features    VARCHAR(64)         NOT NULL,
 	    popularity  INTEGER             NOT NULL,
-	    INDEX estate_rent (rent)
+	    INDEX estate_rent (rent),
+	    INDEX estate_point (latitude, longitude)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 CREATE TABLE isuumo.chair
