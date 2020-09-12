@@ -2,11 +2,11 @@
 set -xe
 set -o pipefail
 
-exportMYSQL_HOST=${MYSQL_HOST:-127.0.0.1}
-MYSQL_PORT=${MYSQL_PORT:-3306}
-MYSQL_USER=${MYSQL_USER:-isucon}
-MYSQL_DBNAME=${MYSQL_DBNAME:-isuumo}
-MYSQL_PWD=${MYSQL_PASS:-isucon}
+export MYSQL_HOST=${MYSQL_HOST:-localhost}
+export MYSQL_PORT=${MYSQL_PORT:-3306}
+export MYSQL_USER=${MYSQL_USER:-isucon}
+export MYSQL_DBNAME=${MYSQL_DBNAME:-isuumo}
+export MYSQL_PWD=${MYSQL_PASS:-isucon}
 export LANG="C.UTF-8"
 cd /opt/dbseed/
 
