@@ -42,5 +42,6 @@ services:
           - "$PWD/etc/mysql/my.cnf:/etc/mysql/my.cnf"
           - "$PWD/etc/mysql/conf.d:/etc/mysql/conf.d"
           - "$PWD/etc/mysql/mysql.conf.d:/etc/mysql/mysql.conf.d"
-          - "$PWD/mysql/db/init.docker.sh:/docker-entrypoint-initdb.d/01.sh"
+          - "$PWD/mysql/db/init.docker.sh:/docker-entrypoint-initdb.d/02.sh"
+          # - "$PWD/mysql/db/init-user.docker.sh:/docker-entrypoint-initdb.d/01.sh"
           - "$PWD/mysql/db/:/opt/dbseed/"
