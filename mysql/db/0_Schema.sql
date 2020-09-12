@@ -19,7 +19,9 @@ CREATE TABLE isuumo.estate
 	    door_width  INTEGER             NOT NULL,
 	    features    VARCHAR(64)         NOT NULL,
 	    popularity  INTEGER             NOT NULL,
-	    INDEX estate_rent (rent)
+	    INDEX estate_rent (rent),
+	    INDEX estate_popularity (popularity),
+	    INDEX estate_width_stock (width, stock)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 CREATE TABLE isuumo.chair
