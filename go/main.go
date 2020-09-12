@@ -597,33 +597,21 @@ func buyChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	_, err = tx.Exec("UPDATE chair SET stock = stock - 1 WHERE id = ?", id)
-	if err != nil {
-		c.Echo().Logger.Errorf("chair stock update failed : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	err = tx.Commit()
-	if err != nil {
-		c.Echo().Logger.Errorf("transaction commit error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	tx, err = db.Beginx()
-	if err != nil {
-		c.Echo().Logger.Errorf("failed to create transaction : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
-
 	if chair.Stock == 1 {
 		_, err = tx.Exec("DELETE chair WHERE id = ?", id)
 		if err != nil {
 			c.Echo().Logger.Errorf("stock == 1 but cannot delete, %v", chair)
 		}
 		_, err = tx.Exec("INSERT INTO outofstock_chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-			id, chair.Name, chair.Description, chair.Thumbnail, chair.Price, chair.Height, chair.Width, chair.Depth, chair.Color, chair.Features, chair.Kind, chair.Popularity, chair.Stock-1)
+			id, chair.Name, chair.Description, chair.Thumbnail, chair.Price, chair.Height, chair.Width, chair.Depth, chair.Color, chair.Features, chair.Kind, chair.Popularity, 0)
 		if err != nil {
 			c.Echo().Logger.Errorf("stock == 1 but cannot insert outofstock_chair, %v", chair)
+		}
+	} else {
+		_, err = tx.Exec("UPDATE chair SET stock = stock - 1 WHERE id = ?", id)
+		if err != nil {
+			c.Echo().Logger.Errorf("chair stock update failed : %v", err)
+			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
 
