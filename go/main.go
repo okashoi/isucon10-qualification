@@ -320,16 +320,23 @@ func initialize(c echo.Context) error {
 	err := db.Select(&outofstockChair, "select * from chair where stock = 0")
 	if err != nil {
 		if err == sql.ErrNoRows {
-
 		}
 		c.Logger().Errorf("initialized outofstock chairs DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	if len(outofstockChair) == 0 {
+		c.Logger().Debugf("Not Found out of stock chair")
+		return c.JSON(http.StatusOK, InitializeResponse{
+			Language: "go",
+		})
+	}
 	tx, err := db.Begin()
 	_, err = tx.Exec("delete chair where stock = 0")
-	for _, c := range outofstockChair {
+
+	for _, ch := range outofstockChair {
+		c.Logger().Debugf("%v\n", ch)
 		_, err = tx.Exec("INSERT INTO outofstock_chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-			c.ID, c.Name, c.Description, c.Thumbnail, c.Price, c.Height, c.Width, c.Depth, c.Color, c.Features, c.Kind, c.Popularity, c.Stock-1)
+			ch.ID, ch.Name, ch.Description, ch.Thumbnail, ch.Price, ch.Height, ch.Width, ch.Depth, ch.Color, ch.Features, ch.Kind, ch.Popularity, ch.Stock)
 	}
 	tx.Commit()
 
