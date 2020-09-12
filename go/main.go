@@ -909,7 +909,7 @@ func searchEstateNazotte(c echo.Context) error {
 	b := coordinates.getBoundingBox()
 	estatesInPolygon := []Estate{}
 	coordinatesText := coordinates.coordinatesToText()
-	query := `SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? AND ST_Contains(ST_PolygonFromText(?), coords) ORDER BY popularity DESC, id ASC`
+	query := `SELECT * FROM (SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ?) AS e WHERE ST_Contains(ST_PolygonFromText(?), coords) ORDER BY popularity DESC, id ASC`
 	err = db.Select(&estatesInPolygon, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude, coordinatesText)
 	if err == sql.ErrNoRows {
 		c.Echo().Logger.Infof("select * from estate where latitude ...", err)
