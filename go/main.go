@@ -241,7 +241,7 @@ func init() {
 
 func main() {
 	go func() {
-	    fmt.Println(http.ListenAndServe("localhost:6060", nil))
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 
 	// Echo instance
@@ -289,6 +289,8 @@ func main() {
 	e.Logger.Fatal(e.Start(serverPort))
 }
 
+// Note: Localでは叩かない
+// dbのContainerで初期化する
 func initialize(c echo.Context) error {
 	sqlDir := filepath.Join("..", "mysql", "db")
 	paths := []string{
