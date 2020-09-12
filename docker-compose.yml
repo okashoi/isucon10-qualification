@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+    proxy:
+        image: nginx:1.14.1
+        volumes:
+          - "$PWD/etc/nginx:/etc/nginx"
+        ports:
+          - "80:80"
+        depends_on:
+          - db
+          - app
+
+    app:
+        build:
+            context: .
+            dockerfile: ./go/Dockerfile
+        command: "make run/docker"
+        volumes:
+          - "$PWD/go:/opt/app/go"
+          - "$PWD/fixture:/opt/app/fixture"
+        ports:
+          - "1323:1323"
+        environment:
+          MYSQL_HOST: "db"
+
+    db:
+        image: mysql:5.7
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+            MYSQL_ROOT_PASSWORD: ""
+            MYSQL_DATABASE: "isuumo"
+            MYSQL_USER: "isucon"
+            MYSQL_PASSWORD: "isucon"
+        ports:
+            - "33060:3306"
+        volumes:
+          - "$PWD/etc/mysql/my.cnf:/etc/my.cnf"
+          - "$PWD/etc/mysql/conf.d:/etc/conf.d"
+          - "$PWD/etc/mysql/mysql.conf.d:/etc/mysql.conf.d"
+          - "$PWD/mysql/db/init.docker.sh:/docker-entrypoint-initdb.d/01.sh"
+          - "$PWD/mysql/db/:/opt/dbseed/"
