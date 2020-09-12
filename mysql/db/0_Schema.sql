@@ -19,9 +19,6 @@ CREATE TABLE isuumo.estate
 	    features    VARCHAR(64)         NOT NULL,
 	    popularity  INTEGER             NOT NULL,
 	    INDEX estate_rent (rent),
-	    INDEX estate_popularity (popularity),
-	    INDEX estate_door_height (door_height),
-	    INDEX estate_door_width (door_width)
 	    INDEX estate_point (latitude, longitude)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
@@ -40,7 +37,5 @@ CREATE TABLE isuumo.chair
 	    kind        VARCHAR(64)     NOT NULL,
 	    popularity  INTEGER         NOT NULL,
 	    stock       INTEGER         NOT NULL,
-	    INDEX chair_price (price),
-	    INDEX chair_kind_stock (kind, stock),
-	    INDEX chair_popularity (popularity)
+        INDEX chair_price (price)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
