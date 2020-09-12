@@ -602,6 +602,19 @@ func buyChair(c echo.Context) error {
 		c.Echo().Logger.Errorf("chair stock update failed : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	err = tx.Commit()
+	if err != nil {
+		c.Echo().Logger.Errorf("transaction commit error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	tx, err = db.Beginx()
+	if err != nil {
+		c.Echo().Logger.Errorf("failed to create transaction : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	defer tx.Rollback()
+
 	if chair.Stock == 1 {
 		_, err = tx.Exec("DELETE chair WHERE id = ?", id)
 		if err != nil {
