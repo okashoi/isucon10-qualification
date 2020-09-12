@@ -21,7 +21,8 @@ CREATE TABLE isuumo.estate
 	    popularity  INTEGER             NOT NULL,
 	    INDEX estate_rent (rent),
 	    INDEX estate_popularity (popularity),
-	    INDEX estate_width_stock (width, stock)
+	    INDEX estate_door_height (door_height),
+	    INDEX estate_door_width (door_width)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 CREATE TABLE isuumo.chair
