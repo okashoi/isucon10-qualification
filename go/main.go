@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
@@ -14,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -351,16 +352,19 @@ func postChair(c echo.Context) error {
 		c.Logger().Errorf("failed to get form file: %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
-	f, err := header.Open()
-	if err != nil {
-		c.Logger().Errorf("failed to open form file: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer f.Close()
-	records, err := csv.NewReader(f).ReadAll()
-	if err != nil {
-		c.Logger().Errorf("failed to read csv: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
+
+	var readerErr error
+
+	mysql.RegisterReaderHandler("data", func() io.Reader {
+		f, err := header.Open()
+		if err != nil {
+			readerErr = err
+			return nil
+		}
+		return f
+	})
+	if readerErr != nil {
+		c.Logger().Errorf("failed to open form file: %v", readerErr)
 	}
 
 	tx, err := db.Begin()
@@ -369,31 +373,12 @@ func postChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
-	for _, row := range records {
-		rm := RecordMapper{Record: row}
-		id := rm.NextInt()
-		name := rm.NextString()
-		description := rm.NextString()
-		thumbnail := rm.NextString()
-		price := rm.NextInt()
-		height := rm.NextInt()
-		width := rm.NextInt()
-		depth := rm.NextInt()
-		color := rm.NextString()
-		features := rm.NextString()
-		kind := rm.NextString()
-		popularity := rm.NextInt()
-		stock := rm.NextInt()
-		if err := rm.Err(); err != nil {
-			c.Logger().Errorf("failed to read record: %v", err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-		_, err := tx.Exec("INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock)
-		if err != nil {
-			c.Logger().Errorf("failed to insert chair: %v", err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
+	_, err = db.Exec(`LOAD DATA LOCAL INFILE 'Reader::data' INTO TABLE chair FIELDS TERMINATED BY ',' `)
+	if err != nil {
+		c.Logger().Errorf("failed to exec: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
 	}
+
 	if err := tx.Commit(); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
