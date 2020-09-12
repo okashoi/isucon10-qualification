@@ -604,8 +604,14 @@ func buyChair(c echo.Context) error {
 	}
 	if chair.Stock == 1 {
 		_, err = tx.Exec("DELETE chair WHERE id = ?", id)
+		if err != nil {
+			c.Echo().Logger.Errorf("stock == 1 but cannot delete, %v", chair)
+		}
 		_, err = tx.Exec("INSERT INTO outofstock_chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
 			id, chair.Name, chair.Description, chair.Thumbnail, chair.Price, chair.Height, chair.Width, chair.Depth, chair.Color, chair.Features, chair.Kind, chair.Popularity, chair.Stock-1)
+		if err != nil {
+			c.Echo().Logger.Errorf("stock == 1 but cannot insert outofstock_chair, %v", chair)
+		}
 	}
 
 	err = tx.Commit()
