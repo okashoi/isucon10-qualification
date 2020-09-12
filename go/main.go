@@ -70,7 +70,8 @@ type Estate struct {
 	DoorWidth   int64   `db:"door_width" json:"doorWidth"`
 	Features    string  `db:"features" json:"features"`
 	Popularity  int64   `db:"popularity" json:"-"`
-	Coords		[]uint8 `db:"coords"`
+	Coords      []uint8 `db:"coords"`
+	EstateId    int64   `db:"estate_id" json:"-"`
 }
 
 //EstateSearchResponse estate/searchへのレスポンスの形式
@@ -294,6 +295,8 @@ func initialize(c echo.Context) error {
 		filepath.Join(sqlDir, "2_DummyChairData.sql"),
 		filepath.Join(sqlDir, "3_CreateOutofstockChair.sql"),
 		filepath.Join(sqlDir, "4_AddPointIndex.sql"),
+		filepath.Join(sqlDir, "5_CreateInsertEstateFeatureId.sql"),
+		filepath.Join(sqlDir, "6_CreateEstateWithFeature.sql"),
 	}
 
 	for _, p := range paths {
@@ -312,8 +315,83 @@ func initialize(c echo.Context) error {
 		}
 	}
 
+	estateFeatureMap = map[string]int{
+		"最上階":          1,
+		"防犯カメラ":        2,
+		"ウォークインクローゼット": 3,
+		"ワンルーム":        4,
+		"ルーフバルコニー付":    5,
+		"エアコン付き":       6,
+		"駐輪場あり":        7,
+		"プロパンガス":       8,
+		"駐車場あり":        9,
+		"防音室":          10,
+		"追い焚き風呂":       11,
+		"オートロック":       12,
+		"即入居可":         13,
+		"IHコンロ":        14,
+		"敷地内駐車場":       15,
+		"トランクルーム":      16,
+		"角部屋":          17,
+		"カスタマイズ可":      18,
+		"DIY可":         19,
+		"ロフト":          20,
+		"シューズボックス":     21,
+		"インターネット無料":    22,
+		"地下室":          23,
+		"敷地内ゴミ置場":      24,
+		"管理人有り":        25,
+		"宅配ボックス":       26,
+		"ルームシェア可":      27,
+		"セキュリティ会社加入済":  28,
+		"メゾネット":        29,
+		"女性限定":         30,
+		"バイク置場あり":      31,
+		"エレベーター":       32,
+		"ペット相談可":       33,
+		"洗面所独立":        34,
+		"都市ガス":         35,
+		"浴室乾燥機":        36,
+		"インターネット接続可":   37,
+		"テレビ・通信":       38,
+		"専用庭":          39,
+		"システムキッチン":     40,
+		"高齢者歓迎":        41,
+		"ケーブルテレビ":      42,
+		"床下収納":         43,
+		"バス・トイレ別":      44,
+		"駐車場2台以上":      45,
+		"楽器相談可":        46,
+		"フローリング":       47,
+		"オール電化":        48,
+		"TVモニタ付きインタホン": 49,
+		"デザイナーズ物件":     50,
+	}
+
+	tx, err := db.Begin()
+
+	estates := []Estate{}
+	err = db.Select(&estates, "select * from estate")
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
+		}
+		c.Logger().Errorf("searchEstates DB execution error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	for _, e := range estates {
+		conditions := make([]string, 0)
+		for _, f := range strings.Split(e.Features, ",") {
+			conditions = append(conditions, fmt.Sprintf("(%d, %d)", e.ID, estateFeatureMap[f]))
+		}
+		estateFeatures := strings.Join(conditions, ", ")
+		a := fmt.Sprintf("INSERT into estate_with_feature (estate_id, estate_feature_id)values %s", estateFeatures)
+		_, err = tx.Exec(a)
+	}
+	tx.Commit()
+
 	outofstockChair := []Chair{}
-	err := db.Select(&outofstockChair, "select * from chair where stock = 0")
+	err = db.Select(&outofstockChair, "select * from chair where stock = 0")
 	if err != nil {
 		if err == sql.ErrNoRows {
 		}
@@ -326,7 +404,7 @@ func initialize(c echo.Context) error {
 			Language: "go",
 		})
 	}
-	tx, err := db.Begin()
+	tx, err = db.Begin()
 	_, err = tx.Exec("delete from chair where stock = 0")
 
 	for _, ch := range outofstockChair {
@@ -674,6 +752,8 @@ func getRange(cond RangeCondition, rangeID string) (*Range, error) {
 	return cond.Ranges[RangeIndex], nil
 }
 
+var estateFeatureMap map[string]int
+
 func postEstate(c echo.Context) error {
 	header, err := c.FormFile("estates")
 	if err != nil {
@@ -717,6 +797,15 @@ func postEstate(c echo.Context) error {
 			return c.NoContent(http.StatusBadRequest)
 		}
 		_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity, coords) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,POINT(?, ?))", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity, latitude, longitude)
+
+		conditions := make([]string, 0)
+		for _, f := range strings.Split(features, ",") {
+			conditions = append(conditions, fmt.Sprintf("(%d, %d)", id, estateFeatureMap[f]))
+		}
+		estateFeatures := strings.Join(conditions, ", ")
+		a := fmt.Sprintf("INSERT into estate_with_feature (estate_id, estate_feature_id) values %s", estateFeatures)
+		_, err = tx.Exec(a)
+
 		if err != nil {
 			c.Logger().Errorf("failed to insert estate: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
@@ -784,16 +873,27 @@ func searchEstates(c echo.Context) error {
 		}
 	}
 
+	searchQuery := "SELECT * FROM estate WHERE "
+	countQuery := "SELECT COUNT(*) FROM estate WHERE "
+
 	if c.QueryParam("features") != "" {
+		fids := make([]string, 0)
+
 		for _, f := range strings.Split(c.QueryParam("features"), ",") {
-			conditions = append(conditions, "features like concat('%', ?, '%')")
-			params = append(params, f)
+			fids = append(fids, fmt.Sprintf("%d", estateFeatureMap[f]))
 		}
+		estateFeatures := strings.Join(fids, ", ")
+		searchQuery = fmt.Sprintf("SELECT * FROM estate join (select estate_id from estate_with_feature where estate_feature_id in (%s)) as ef on ef.estate_id = id ", estateFeatures)
+		countQuery = fmt.Sprintf("SELECT COUNT(*) FROM estate join (select estate_id from estate_with_feature where estate_feature_id in (%s)) as ef on ef.estate_id = id ", estateFeatures)
 	}
 
-	if len(conditions) == 0 {
+	if c.QueryParam("features") == "" && len(conditions) == 0 {
 		c.Echo().Logger.Infof("searchEstates search condition not found")
 		return c.NoContent(http.StatusBadRequest)
+	}
+	if c.QueryParam("features") != "" && len(conditions) > 0 {
+		searchQuery = searchQuery + " WHERE "
+		countQuery = countQuery + " WHERE "
 	}
 
 	page, err := strconv.Atoi(c.QueryParam("page"))
@@ -808,8 +908,6 @@ func searchEstates(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	searchQuery := "SELECT * FROM estate WHERE "
-	countQuery := "SELECT COUNT(*) FROM estate WHERE "
 	searchCondition := strings.Join(conditions, " AND ")
 	limitOffset := " ORDER BY popularity DESC, id ASC LIMIT ? OFFSET ?"
 
