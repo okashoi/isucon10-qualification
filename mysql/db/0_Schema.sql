@@ -43,5 +43,5 @@ CREATE TABLE isuumo.chair
         INDEX chair_price (price),
 		INDEX chair_color (color),
 		INDEX chair_kind (kind),
-		INDEX chair_popularity_id (popularity, id)
+		INDEX chair_popularity (popularity)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
