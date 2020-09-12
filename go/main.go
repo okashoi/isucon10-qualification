@@ -579,6 +579,11 @@ func buyChair(c echo.Context) error {
 		c.Echo().Logger.Errorf("chair stock update failed : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	if chair.Stock == 1 {
+		_, err = tx.Exec("DELETE chair WHERE id = ?", id)
+		_, err = tx.Exec("INSERT INTO outofstock_chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+			id, chair.Name, chair.Description, chair.Thumbnail, chair.Price, chair.Height, chair.Width, chair.Depth, chair.Color, chair.Features, chair.Kind, chair.Popularity, chair.Stock-1)
+	}
 
 	err = tx.Commit()
 	if err != nil {
