@@ -297,6 +297,7 @@ func initialize(c echo.Context) error {
 		filepath.Join(sqlDir, "0_Schema.sql"),
 		filepath.Join(sqlDir, "1_DummyEstateData.sql"),
 		filepath.Join(sqlDir, "2_DummyChairData.sql"),
+		filepath.Join(sqlDir, "3_CreateOutofstockChair.sql"),
 	}
 
 	for _, p := range paths {
@@ -314,6 +315,30 @@ func initialize(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
+
+	outofstockChair := []Chair{}
+	err := db.Select(&outofstockChair, "select * from chair where stock = 0")
+	if err != nil {
+		if err == sql.ErrNoRows {
+		}
+		c.Logger().Errorf("initialized outofstock chairs DB execution error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	if len(outofstockChair) == 0 {
+		c.Logger().Debugf("Not Found out of stock chair")
+		return c.JSON(http.StatusOK, InitializeResponse{
+			Language: "go",
+		})
+	}
+	tx, err := db.Begin()
+	_, err = tx.Exec("delete from chair where stock = 0")
+
+	for _, ch := range outofstockChair {
+		c.Logger().Debugf("%v\n", ch)
+		_, err = tx.Exec("INSERT INTO outofstock_chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+			ch.ID, ch.Name, ch.Description, ch.Thumbnail, ch.Price, ch.Height, ch.Width, ch.Depth, ch.Color, ch.Features, ch.Kind, ch.Popularity, ch.Stock)
+	}
+	tx.Commit()
 
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
@@ -495,8 +520,6 @@ func searchChairs(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	conditions = append(conditions, "stock > 0")
-
 	page, err := strconv.Atoi(c.QueryParam("page"))
 	if err != nil {
 		c.Logger().Infof("Invalid format page parameter : %v", err)
@@ -564,7 +587,7 @@ func buyChair(c echo.Context) error {
 	defer tx.Rollback()
 
 	var chair Chair
-	err = tx.QueryRowx("SELECT * FROM chair WHERE id = ? AND stock > 0 FOR UPDATE", id).StructScan(&chair)
+	err = tx.QueryRowx("SELECT * FROM chair WHERE id = ? FOR UPDATE", id).StructScan(&chair)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.Echo().Logger.Infof("buyChair chair id \"%v\" not found", id)
@@ -574,10 +597,22 @@ func buyChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	_, err = tx.Exec("UPDATE chair SET stock = stock - 1 WHERE id = ?", id)
-	if err != nil {
-		c.Echo().Logger.Errorf("chair stock update failed : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
+	if chair.Stock == 1 {
+		_, err = tx.Exec("DELETE from chair WHERE id = ?", id)
+		if err != nil {
+			c.Echo().Logger.Errorf("stock == 1 but cannot delete, %v", chair)
+		}
+		_, err = tx.Exec("INSERT INTO outofstock_chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+			id, chair.Name, chair.Description, chair.Thumbnail, chair.Price, chair.Height, chair.Width, chair.Depth, chair.Color, chair.Features, chair.Kind, chair.Popularity, 0)
+		if err != nil {
+			c.Echo().Logger.Errorf("stock == 1 but cannot insert outofstock_chair, %v", chair)
+		}
+	} else {
+		_, err = tx.Exec("UPDATE chair SET stock = stock - 1 WHERE id = ?", id)
+		if err != nil {
+			c.Echo().Logger.Errorf("chair stock update failed : %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
 	}
 
 	err = tx.Commit()
@@ -595,7 +630,7 @@ func getChairSearchCondition(c echo.Context) error {
 
 func getLowPricedChair(c echo.Context) error {
 	var chairs []Chair
-	query := `SELECT * FROM chair WHERE stock > 0 ORDER BY price ASC, id ASC LIMIT ?`
+	query := `SELECT * FROM chair ORDER BY price ASC, id ASC LIMIT ?`
 	err := db.Select(&chairs, query, Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
