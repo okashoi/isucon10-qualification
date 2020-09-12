@@ -289,6 +289,8 @@ func main() {
 	e.Logger.Fatal(e.Start(serverPort))
 }
 
+// Note: Localでは叩かない
+// dbのContainerで初期化する
 func initialize(c echo.Context) error {
 	sqlDir := filepath.Join("..", "mysql", "db")
 	paths := []string{
