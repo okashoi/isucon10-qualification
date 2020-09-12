@@ -40,5 +40,8 @@ CREATE TABLE isuumo.chair
 	    kind        VARCHAR(64)     NOT NULL,
 	    popularity  INTEGER         NOT NULL,
 	    stock       INTEGER         NOT NULL,
-        INDEX chair_price (price)
+        INDEX chair_price (price),
+		INDEX chair_color (color),
+		INDEX chair_kind (kind),
+		INDEX chair_popularity_id (popularity, id)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
