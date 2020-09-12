@@ -72,6 +72,7 @@ type Estate struct {
 	DoorWidth   int64   `db:"door_width" json:"doorWidth"`
 	Features    string  `db:"features" json:"features"`
 	Popularity  int64   `db:"popularity" json:"-"`
+	Coords		[]uint8 `db:"coords"`
 }
 
 //EstateSearchResponse estate/searchへのレスポンスの形式
@@ -721,7 +722,7 @@ func postEstate(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity)
+		_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity, coords) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,POINT(?, ?))", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity, latitude, longitude)
 		if err != nil {
 			c.Logger().Errorf("failed to insert estate: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
@@ -909,7 +910,6 @@ func searchEstateNazotte(c echo.Context) error {
 	estatesInPolygon := []Estate{}
 	coordinatesText := coordinates.coordinatesToText()
 	query := `SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? AND ST_Contains(ST_PolygonFromText(?), coords) ORDER BY popularity DESC, id ASC`
-	c.Echo().Logger.Infof(query)
 	err = db.Select(&estatesInPolygon, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude, coordinatesText)
 	if err == sql.ErrNoRows {
 		c.Echo().Logger.Infof("select * from estate where latitude ...", err)
