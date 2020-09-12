@@ -14,7 +14,7 @@ echo ''  | sudo tee /var/log/mysql/slow.log /var/log/nginx/access.log
 
 # 各種サービス起動
 sudo systemctl start mysql
-sudo systemctl start isubata.golang.service
+sudo systemctl start isuumo.go.service
 sudo systemctl start nginx
 
 # slow query log の設定
